@@ -1,0 +1,29 @@
+# Text Editor Configuration
+theme: system
+autoSave: true
+autoSaveInterval: 30000
+
+# Theme options:
+# - light: Always use light theme
+# - dark: Always use dark theme  
+# - system: Follow system preference (default)
+
+# Auto-save settings:
+# - autoSave: Enable/disable auto-save
+# - autoSaveInterval: Auto-save interval in milliseconds
+
+# Toast UI Editor Configuration
+editor:
+  previewStyle: 'vertical'
+  height: '100%'
+  initialEditType: 'wysiwyg'
+  initialValue: '# Start writing your note here...'
+  usageStatistics: false
+  hideModeSwitch: true
+  toolbarItems:
+    - ['heading', 'bold', 'italic', 'strike']
+    - ['hr', 'quote']
+    - ['ul', 'ol', 'task', 'indent', 'outdent']
+    - ['table', 'link', 'image']
+    - ['code', 'codeblock']
+    - ['scrollSync']
