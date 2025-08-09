@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            /* GNOME Light Theme */
+            --window-bg: #fafafa;
+            --headerbar-bg: #ebebeb;
+            --headerbar-fg: #2e3436;
+            --headerbar-border: #d1d5db;
+            --button-bg: transparent;
+            --button-fg: #2e3436;
+            --button-hover: rgba(46, 52, 54, 0.08);
+            --button-active: rgba(46, 52, 54, 0.12);
+            --sidebar-bg: #f6f5f4;
+            --content-bg: #ffffff;
+            --border-color: #d1d5db;
+            --text-primary: #2e3436;
+            --text-secondary: #5e5c64;
+            --accent-blue: #3584e4;
+            --accent-blue-hover: #1c71d8;
+            --destructive-red: #e01b24;
+            --destructive-red-hover: #c01c28;
+            --success-green: #26a269;
+            --shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                /* GNOME Dark Theme */
+                --window-bg: #242424;
+                --headerbar-bg: #232428;
+                --headerbar-fg: #f7f9fc;
+                --headerbar-border: #3d3d3d;
+                --button-bg: transparent;
+                --button-fg: #ffffff;
+                --button-hover: rgba(255, 255, 255, 0.08);
+                --button-active: rgba(255, 255, 255, 0.12);
+                --sidebar-bg: #2d2d2d;
+                --content-bg: #1e1e1e;
+                --border-color: #3d3d3d;
+                --text-primary: #ffffff;
+                --text-secondary: #c0bfbc;
+                --accent-blue: #3584e4;
+                --accent-blue-hover: #1c71d8;
+                --destructive-red: #e01b24;
+                --destructive-red-hover: #c01c28;
+                --success-green: #26a269;
+                --shadow: 0 1px 3px rgba(0, 0, 0, 0.24), 0 1px 2px rgba(0, 0, 0, 0.48);
+            }
+        }
+
+        body {
+            font-family: 'Inter', 'Cantarell', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            background-color: var(--window-bg);
+            color: var(--text-primary);
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .container {
+            height: 100vh;
+            position: relative;
+            background-color: var(--window-bg);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* GNOME-style headerbar */
+        .headerbar {
+            background: var(--headerbar-bg);
+            border-bottom: 1px solid var(--headerbar-border);
+            height: 46px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 100;
+        }
+
+        .headerbar-start {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .headerbar-end {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .headerbar-center {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--headerbar-fg);
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        /* GNOME-style buttons */
+        .headerbar-button {
+            background: var(--button-bg);
+            border: none;
+            color: var(--headerbar-fg);
+            font-size: 16px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 6px;
+            transition: all 0.1s ease;
+            min-width: 30px;
+            min-height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .headerbar-button:hover {
+            background: var(--button-hover);
+        }
+
+        .headerbar-button:active {
+            background: var(--button-active);
+        }
+
+        /* Main content area */
+        .main-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 48px 24px;
+            position: relative;
+        }
+
+        /* Welcome content - GNOME card style */
+        .welcome-card {
+            background: var(--content-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            padding: 48px;
+            max-width: 480px;
+            width: 100%;
+            text-align: center;
+            position: relative;
+        }
+
+        .welcome-title {
+            color: var(--text-primary);
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
+        }
+
+        .welcome-subtitle {
+            color: var(--text-secondary);
+            font-size: 16px;
+            font-weight: 400;
+            margin-bottom: 36px;
+            line-height: 1.5;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* GNOME-style primary buttons */
+        .action-btn {
+            background: var(--accent-blue);
+            border: none;
+            color: #ffffff;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            text-align: center;
+            min-height: 44px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            letter-spacing: 0.25px;
+        }
+
+        .action-btn:hover {
+            background: var(--accent-blue-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+        }
+
+        .action-btn:active {
+            background: var(--accent-blue);
+            transform: translateY(0);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Secondary action style for some buttons */
+        .action-btn.secondary {
+            background: var(--button-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .action-btn.secondary:hover {
+            background: var(--button-hover);
+            border-color: var(--border-color);
+        }
+
+        .action-btn.secondary:active {
+            background: var(--button-active);
+        }
+
+        /* Branding in bottom corner - GNOME style */
+        .bottom-branding {
+            position: absolute;
+            bottom: 24px;
+            right: 24px;
+            text-align: right;
+        }
+
+        .brand-name {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 2px;
+            color: var(--accent-blue);
+            letter-spacing: -0.25px;
+        }
+
+        .brand-slogan {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 400;
+            letter-spacing: 0.1px;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) or (max-aspect-ratio: 1/1) {
+            .main-content {
+                padding: 24px 16px;
+            }
+            
+            .welcome-card {
+                padding: 32px 24px;
+                max-width: 400px;
+            }
+            
+            .welcome-title {
+                font-size: 28px;
+            }
+            
+            .bottom-branding {
+                bottom: 16px;
+                right: 16px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .welcome-card {
+                padding: 24px 20px;
+                margin: 0 8px;
+            }
+            
+            .welcome-title {
+                font-size: 24px;
+            }
+            
+            .welcome-subtitle {
+                font-size: 14px;
+            }
+            
+            .action-btn {
+                padding: 10px 20px;
+                font-size: 14px;
+                min-height: 40px;
+            }
+            
+            .brand-name {
+                font-size: 16px;
+            }
+        }
+
+        /* Smooth transitions for theme changes */
+        *, *::before, *::after {
+            transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        /* GNOME-style focus indicators */
+        .headerbar-button:focus-visible,
+        .action-btn:focus-visible {
+            outline: 2px solid var(--accent-blue);
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="container">
+        <!-- GNOME-style headerbar -->
+        <div class="headerbar">
+            <div class="headerbar-start">
+                <button class="headerbar-button" onclick="handlePreferences()" aria-label="Open preferences" title="Preferences">≡</button>
+            </div>
+            <div class="headerbar-center">MarkFlow</div>
+            <div class="headerbar-end">
+                <!-- Window controls would go here in a real GNOME app -->
+            </div>
+        </div>
+
+        <!-- Main content -->
+        <div class="main-content">
+            <div class="welcome-card">
+                <h1 class="welcome-title">Welcome back!</h1>
+                <p class="welcome-subtitle">What would you like to work on today?</p>
+                
+                <div class="action-buttons">
+                    <button class="action-btn" onclick="handleNewNote()">New note</button>
+                    <button class="action-btn secondary" onclick="handleOpenFile()">Open file</button>
+                    <button class="action-btn secondary" onclick="handleNewProject()">New project</button>
+                    <button class="action-btn secondary" onclick="handleMySpace()">My space</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Branding -->
+        <div class="bottom-branding">
+            <div class="brand-name">MarkFlow</div>
+            <div class="brand-slogan">Capture ideas. Build them into reality</div>
+        </div>
+    </div>
+
+    <script>
+        // Handle button clicks with console logging
+        function handlePreferences() {
+            console.log('Preferences clicked');
+        }
+
+        function handleNewNote() {
+            console.log('New note clicked');
+        }
+
+        function handleOpenFile() {
+            console.log('Open file clicked');
+        }
+
+        function handleNewProject() {
+            console.log('New project clicked');
+        }
+
+        function handleMySpace() {
+            console.log('My space clicked');
+        }
+
+        // Handle responsive layout
+        function updateLayout() {
+            const container = document.getElementById('container');
+            const aspectRatio = window.innerWidth / window.innerHeight;
+            
+            if (aspectRatio > 1) {
+                container.classList.remove('portrait');
+                container.classList.add('landscape');
+            } else {
+                container.classList.remove('landscape');
+                container.classList.add('portrait');
+            }
+        }
+
+        // Initial layout setup
+        updateLayout();
+
+        // Update layout on window resize
+        window.addEventListener('resize', updateLayout);
+
+        // Add ripple effect to buttons
+        document.querySelectorAll('.action-btn, .headerbar-button').forEach(button => {
+            button.addEventListener('click', function(e) {
+                const ripple = document.createElement('span');
+                const rect = this.getBoundingClientRect();
+                const size = Math.max(rect.width, rect.height);
+                const x = e.clientX - rect.left - size / 2;
+                const y = e.clientY - rect.top - size / 2;
+                
+                ripple.style.width = ripple.style.height = size + 'px';
+                ripple.style.left = x + 'px';
+                ripple.style.top = y + 'px';
+                ripple.classList.add('ripple');
+                
+                this.appendChild(ripple);
+                
+                setTimeout(() => {
+                    ripple.remove();
+                }, 600);
+            });
+        });
+
+        // Add ripple animation styles
+        const style = document.createElement('style');
+        style.textContent = `
+            .action-btn, .headerbar-button {
+                position: relative;
+                overflow: hidden;
+            }
+            
+            .ripple {
+                position: absolute;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.25);
+                transform: scale(0);
+                animation: ripple 0.6s linear;
+                pointer-events: none;
+            }
+            
+            @keyframes ripple {
+                to {
+                    transform: scale(2);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

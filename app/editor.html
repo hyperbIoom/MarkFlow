@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MarkFlow</title>
+  <!-- Toast UI Editor CSS -->
+  <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css">
+  <link id="editor-theme-dark" rel="stylesheet" href="https://uicdn.toast.com/editor/latest/theme/toastui-editor-dark.min.css" disabled>
+  <!-- js-yaml for config parsing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    :root {
+      /* GNOME Light Theme */
+      --window-bg: #fafafa;
+      --headerbar-bg: #ebebeb;
+      --headerbar-fg: #2e3436;
+      --headerbar-border: #d1d5db;
+      --button-bg: transparent;
+      --button-fg: #2e3436;
+      --button-hover: rgba(46, 52, 54, 0.08);
+      --button-active: rgba(46, 52, 54, 0.12);
+      --sidebar-bg: #f6f5f4;
+      --content-bg: #ffffff;
+      --border-color: #d1d5db;
+      --text-primary: #2e3436;
+      --text-secondary: #5e5c64;
+      --accent-blue: #3584e4;
+      --accent-blue-hover: #1c71d8;
+      --destructive-red: #e01b24;
+      --destructive-red-hover: #c01c28;
+      --success-green: #26a269;
+      --shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        /* GNOME Dark Theme */
+        --window-bg: #242424;
+        --headerbar-bg: #232428;
+        --headerbar-fg: #f7f9fc;
+        --headerbar-border: #3d3d3d;
+        --button-bg: transparent;
+        --button-fg: #ffffff;
+        --button-hover: rgba(255, 255, 255, 0.08);
+        --button-active: rgba(255, 255, 255, 0.12);
+        --sidebar-bg: #2d2d2d;
+        --content-bg: #1e1e1e;
+        --border-color: #3d3d3d;
+        --text-primary: #ffffff;
+        --text-secondary: #c0bfbc;
+        --accent-blue: #3584e4;
+        --accent-blue-hover: #1c71d8;
+        --destructive-red: #e01b24;
+        --destructive-red-hover: #c01c28;
+        --success-green: #26a269;
+        --shadow: 0 1px 3px rgba(0, 0, 0, 0.24), 0 1px 2px rgba(0, 0, 0, 0.48);
+      }
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Cantarell, sans-serif;
+      background-color: var(--window-bg);
+      color: var(--text-primary);
+      overflow: hidden;
+    }
+
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    /* Header Bar */
+    .headerbar {
+      background: var(--headerbar-bg);
+      border-bottom: 1px solid var(--headerbar-border);
+      height: 46px;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 6px;
+      -webkit-app-region: drag;
+    }
+
+    .headerbar * {
+      -webkit-app-region: no-drag;
+    }
+
+    .headerbar-start {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .headerbar-center {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .headerbar-end {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .window-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--headerbar-fg);
+      user-select: none;
+    }
+
+    /* GNOME-style buttons */
+    .button {
+      background: var(--button-bg);
+      color: var(--button-fg);
+      border: none;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 30px;
+      user-select: none;
+    }
+
+    .button:hover {
+      background: var(--button-hover);
+    }
+
+    .button:active {
+      background: var(--button-active);
+      transform: scale(0.98);
+    }
+
+    .button.primary {
+      background: var(--accent-blue);
+      color: white;
+    }
+
+    .button.primary:hover {
+      background: var(--accent-blue-hover);
+    }
+
+    .button.destructive {
+      background: var(--destructive-red);
+      color: white;
+    }
+
+    .button.destructive:hover {
+      background: var(--destructive-red-hover);
+    }
+
+    .button.flat {
+      background: transparent;
+      padding: 6px 8px;
+    }
+
+    .button-group {
+      display: flex;
+      background: rgba(0, 0, 0, 0.05);
+      border-radius: 6px;
+      padding: 2px;
+    }
+
+    .button-group .button {
+      margin: 0;
+      border-radius: 4px;
+    }
+
+    /* Menu Button */
+    .menu-button {
+      width: 30px;
+      height: 30px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+    }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      display: flex;
+      background: var(--content-bg);
+      overflow: hidden;
+    }
+
+    #editor-container {
+      flex: 1;
+      overflow: hidden;
+      background: var(--content-bg);
+    }
+
+    #editor {
+      height: calc(100% - 28px);
+    }
+
+    /* Status Bar */
+    .status-bar {
+      height: 28px;
+      background: var(--headerbar-bg);
+      border-top: 1px solid var(--headerbar-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      user-select: none;
+    }
+
+    .status-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      transition: background-color 0.15s ease;
+    }
+
+    .status-item:hover {
+      background: var(--button-hover);
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--text-secondary);
+    }
+
+    .status-dot.success {
+      background: var(--success-green);
+    }
+
+    .status-dot.error {
+      background: var(--destructive-red);
+    }
+
+    .status-dot.warning {
+      background: #f59e0b;
+    }
+
+    /* Loading indicator */
+    .loading {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--button-hover);
+      border-radius: 50%;
+      border-top-color: var(--accent-blue);
+      animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .headerbar {
+        padding: 0 8px;
+      }
+      
+      .button {
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+      
+      .window-title {
+        font-size: 12px;
+      }
+
+      .status-bar {
+        padding: 0 8px;
+      }
+    }
+
+    /* Dark theme specific adjustments for Toast UI Editor */
+    @media (prefers-color-scheme: dark) {
+      .toastui-editor-defaultUI {
+        background-color: var(--content-bg) !important;
+      }
+      
+      .toastui-editor-toolbar {
+        background-color: var(--headerbar-bg) !important;
+        border-bottom-color: var(--headerbar-border) !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- Header Bar -->
+    <header class="headerbar">
+      <div class="headerbar-start">
+        <button class="button menu-button flat" onclick="toggleMenu()" title="Main Menu">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="4" y1="6" x2="20" y2="6"></line>
+            <line x1="4" y1="12" x2="20" y2="12"></line>
+            <line x1="4" y1="18" x2="20" y2="18"></line>
+          </svg>
+        </button>
+        
+        <div class="button-group">
+          <button class="button flat" onclick="openFile()" title="Open File">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14,2 14,8 20,8"></polyline>
+            </svg>
+          </button>
+          <button class="button flat" onclick="saveFile()" title="Save File">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+              <polyline points="17,21 17,13 7,13 7,21"></polyline>
+              <polyline points="7,3 7,8 15,8"></polyline>
+            </svg>
+          </button>
+        </div>
+      </div>
+      
+      <div class="headerbar-center">
+        <span class="window-title" id="window-title">Untitled Document</span>
+      </div>
+      
+      <div class="headerbar-end">
+        <button class="button flat" onclick="saveAsFile()" title="Save As">Save As</button>
+        <button class="button flat" onclick="exportFile()" title="Export">Export</button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div id="editor-container">
+        <div id="editor"></div>
+        
+        <!-- Status Bar -->
+        <div class="status-bar">
+          <div class="status-left">
+            <div class="status-item" id="notification-area">
+              <span class="status-dot" id="notification-dot"></span>
+              <span id="notification-text">Ready</span>
+            </div>
+          </div>
+          <div class="status-right">
+            <div class="status-item" id="save-status">Never saved</div>
+            <div class="status-item" id="word-count">0 words</div>
+            <div class="status-item" id="cursor-position">Line 1, Col 1</div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Toast UI Editor JS -->
+  <script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
+  
+  <script>
+    const { Editor } = toastui;
+    let editor;
+    let currentFileName = 'Untitled Document';
+    let isModified = false;
+    let config = {};
+    let autoSaveInterval;
+
+    // API Configuration
+    const API_BASE = window.location.origin;
+    
+    // Check if running in pywebview
+    const isPyWebView = window.pywebview !== undefined;
+
+    // Status bar notification system
+    function showStatusNotification(message, type = 'info', duration = 3000) {
+      const notificationArea = document.getElementById('notification-area');
+      const notificationDot = document.getElementById('notification-dot');
+      const notificationText = document.getElementById('notification-text');
+      
+      // Update notification
+      notificationText.textContent = message;
+      notificationDot.className = `status-dot ${type}`;
+      
+      // Clear existing timeout
+      if (showStatusNotification.timeout) {
+        clearTimeout(showStatusNotification.timeout);
+      }
+      
+      // Auto-clear after duration
+      if (duration > 0) {
+        showStatusNotification.timeout = setTimeout(() => {
+          notificationText.textContent = 'Ready';
+          notificationDot.className = 'status-dot';
+        }, duration);
+      }
+    }
+
+    // Update save status
+    function updateSaveStatus(status) {
+      const saveStatusEl = document.getElementById('save-status');
+      saveStatusEl.textContent = status;
+    }
+
+    // Update word count
+    function updateWordCount() {
+      const content = editor.getMarkdown();
+      const words = content.trim() ? content.trim().split(/\s+/).length : 0;
+      document.getElementById('word-count').textContent = `${words} words`;
+    }
+
+    // Update cursor position (simplified for now)
+    function updateCursorPosition(line = 1, col = 1) {
+      document.getElementById('cursor-position').textContent = `Line ${line}, Col ${col}`;
+    }
+
+    // Update window title
+    function updateWindowTitle(filename = null) {
+      if (filename) {
+        currentFileName = filename;
+      }
+      const title = `${isModified ? '• ' : ''}${currentFileName}`;
+      document.getElementById('window-title').textContent = title;
+      document.title = title;
+    }
+
+    // Get path from URL query parameter
+    function getPathFromQuery() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const path = urlParams.get('path');
+      return path ? decodeURIComponent(path) : null;
+    }
+
+    // Open file by path
+    async function openFileByPath(path) {
+      try {
+        const result = await apiCall('/api/open-path', { path });
+        
+        if (result.success && result.content !== undefined) {
+          editor.setMarkdown(result.content);
+          if (result.filename) {
+            updateWindowTitle(result.filename);
+          }
+          isModified = false;
+          updateWindowTitle();
+          updateSaveStatus('Saved');
+          updateWordCount();
+          showStatusNotification(`Opened: ${result.filename || path}`, 'success');
+        } else {
+          showStatusNotification(result.message || 'Failed to open file', 'error');
+        }
+      } catch (error) {
+        // Error already handled in apiCall
+      }
+    }
+
+    // Load configuration
+    async function loadConfig() {
+      try {
+        const response = await fetch('./config.yaml');
+        if (response.ok) {
+          const yamlText = await response.text();
+          config = jsyaml.load(yamlText);
+          showStatusNotification('Configuration loaded', 'success', 2000);
+        } else {
+          throw new Error('Config file not found');
+        }
+      } catch (error) {
+        console.warn('Failed to load config.yaml, using defaults:', error);
+        // Default configuration
+        config = {
+          theme: 'system',
+          autoSave: true,
+          autoSaveInterval: 30000,
+          editor: {
+            previewStyle: 'vertical',
+            height: '100%',
+            initialEditType: 'wysiwyg',
+            initialValue: '# Start writing your note here....',
+            usageStatistics: false,
+            hideModeSwitch: true,
+            toolbarItems: [
+              ['heading', 'bold', 'italic', 'strike'],
+              ['hr', 'quote'],
+              ['ul', 'ol', 'task', 'indent', 'outdent'],
+              ['table', 'link', 'image'],
+              ['code', 'codeblock'],
+              ['scrollSync']
+            ]
+          }
+        };
+        showStatusNotification('Using default configuration', 'warning', 2000);
+      }
+    }
+
+    // API calls with error handling
+    async function apiCall(endpoint, data = null) {
+      const loadingButton = event?.target;
+      const originalContent = loadingButton?.innerHTML;
+      
+      try {
+        if (loadingButton) {
+          loadingButton.innerHTML = '<span class="loading"></span>';
+          loadingButton.disabled = true;
+        }
+
+        // Use pywebview API if available, otherwise fall back to HTTP
+        if (isPyWebView) {
+          if (endpoint === '/api/open') {
+            const result = await window.pywebview.api.open_file();
+            return result;
+          } else if (endpoint === '/api/save') {
+            const result = await window.pywebview.api.save_file(data.content);
+            return result;
+          } else if (endpoint === '/api/save-as') {
+            const result = await window.pywebview.api.save_as_file(data.content);
+            return result;
+          }
+        }
+
+        const options = {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        };
+        
+        if (data) {
+          options.body = JSON.stringify(data);
+        }
+
+        const response = await fetch(`${API_BASE}${endpoint}`, options);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        return result;
+        
+      } catch (error) {
+        console.error(`API call failed for ${endpoint}:`, error);
+        
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+          showStatusNotification('Unable to connect to server', 'error', 5000);
+        } else {
+          showStatusNotification(`Error: ${error.message}`, 'error', 5000);
+        }
+        
+        throw error;
+      } finally {
+        if (loadingButton) {
+          loadingButton.innerHTML = originalContent;
+          loadingButton.disabled = false;
+        }
+      }
+    }
+
+    // Auto-save functionality
+    function setupAutoSave() {
+      if (config.autoSave && config.autoSaveInterval > 0) {
+        autoSaveInterval = setInterval(async () => {
+          if (isModified) {
+            try {
+              const content = editor.getMarkdown();
+              const result = await apiCall('/api/save', { content });
+              
+              if (result.success) {
+                isModified = false;
+                updateWindowTitle();
+                updateSaveStatus('Auto saved');
+                showStatusNotification('Auto saved', 'success', 1500);
+              }
+            } catch (error) {
+              showStatusNotification('Auto save failed', 'error', 3000);
+            }
+          }
+        }, config.autoSaveInterval);
+      }
+    }
+
+    // File operations
+    async function openFile() {
+      try {
+        const result = await apiCall('/api/open');
+        
+        if (result.success && result.content !== undefined) {
+          editor.setMarkdown(result.content);
+          if (result.filename) {
+            updateWindowTitle(result.filename);
+          }
+          isModified = false;
+          updateWindowTitle();
+          updateSaveStatus('Saved');
+          updateWordCount();
+          showStatusNotification(`Opened: ${result.filename || 'file'}`, 'success');
+        } else {
+          showStatusNotification(result.message || 'Failed to open file', 'error');
+        }
+      } catch (error) {
+        // Error already handled in apiCall
+      }
+    }
+
+    async function saveFile() {
+      try {
+        const content = editor.getMarkdown();
+        const result = await apiCall('/api/save', { content });
+        
+        if (result.success) {
+          if (result.filename) {
+            updateWindowTitle(result.filename);
+          }
+          isModified = false;
+          updateWindowTitle();
+          updateSaveStatus('Saved');
+          showStatusNotification(`Saved: ${result.filename || 'file'}`, 'success');
+        } else {
+          showStatusNotification(result.message || 'Failed to save file', 'error');
+        }
+      } catch (error) {
+        // Error already handled in apiCall
+      }
+    }
+
+    async function saveAsFile() {
+      try {
+        const content = editor.getMarkdown();
+        const result = await apiCall('/api/save-as', { content });
+        
+        if (result.success) {
+          if (result.filename) {
+            updateWindowTitle(result.filename);
+          }
+          isModified = false;
+          updateWindowTitle();
+          updateSaveStatus('Saved');
+          showStatusNotification(`Saved as: ${result.filename || 'file'}`, 'success');
+        } else {
+          showStatusNotification(result.message || 'Failed to save file', 'error');
+        }
+      } catch (error) {
+        // Error already handled in apiCall
+      }
+    }
+
+    async function exportFile() {
+      try {
+        const content = editor.getMarkdown();
+        const result = await apiCall('/api/export', { content });
+        
+        if (result.success) {
+          showStatusNotification(`Exported: ${result.filename || 'file'}`, 'success');
+        } else {
+          showStatusNotification(result.message || 'Failed to export file', 'error');
+        }
+      } catch (error) {
+        // Error already handled in apiCall
+      }
+    }
+
+    function toggleMenu() {
+      showStatusNotification('Menu functionality can be implemented here', 'info');
+    }
+
+    // Theme detection and management
+    function getCurrentTheme() {
+      if (config.theme === 'light') return 'light';
+      if (config.theme === 'dark') return 'dark';
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+
+    function applyTheme(theme) {
+      const darkCSS = document.getElementById('editor-theme-dark');
+      if (theme === 'dark') {
+        darkCSS.removeAttribute('disabled');
+      } else {
+        darkCSS.setAttribute('disabled', 'true');
+      }
+    }
+
+    function createEditor(theme) {
+      const editorEl = document.querySelector('#editor');
+      editorEl.innerHTML = '';
+      
+      const editorConfig = {
+        el: editorEl,
+        theme: theme,
+        ...config.editor
+      };
+      
+      editor = new Editor(editorConfig);
+
+      // Track modifications and update UI
+      editor.on('change', () => {
+        if (!isModified) {
+          isModified = true;
+          updateWindowTitle();
+          updateSaveStatus('Modified');
+        }
+        updateWordCount();
+      });
+
+      // Track cursor position (basic implementation)
+      editor.on('focus', () => {
+        updateCursorPosition();
+      });
+    }
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        switch (e.key) {
+          case 'o':
+            e.preventDefault();
+            openFile();
+            break;
+          case 's':
+            e.preventDefault();
+            if (e.shiftKey) {
+              saveAsFile();
+            } else {
+              saveFile();
+            }
+            break;
+          case 'e':
+            e.preventDefault();
+            exportFile();
+            break;
+        }
+      }
+    });
+
+    // Prevent data loss
+    window.addEventListener('beforeunload', (e) => {
+      if (isModified) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return e.returnValue;
+      }
+    });
+
+    // Initialize application
+    async function init() {
+      // Load configuration first
+      await loadConfig();
+      
+      let currentTheme = getCurrentTheme();
+      applyTheme(currentTheme);
+      createEditor(currentTheme);
+      updateWindowTitle();
+      updateSaveStatus('Never saved');
+      updateWordCount();
+
+      // Check for path parameter and open file if exists
+      const pathFromQuery = getPathFromQuery();
+      if (pathFromQuery) {
+        await openFileByPath(pathFromQuery);
+      }
+
+      // Setup auto-save
+      setupAutoSave();
+
+      // Listen for theme changes (only if using system theme)
+      if (config.theme === 'system') {
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+          const newTheme = e.matches ? 'dark' : 'light';
+          if (newTheme !== currentTheme) {
+            currentTheme = newTheme;
+            applyTheme(currentTheme);
+            
+            // Save current content
+            const content = editor.getMarkdown();
+            createEditor(currentTheme);
+            editor.setMarkdown(content);
+          }
+        });
+      }
+
+      // Show ready message
+      setTimeout(() => {
+        showStatusNotification('MarkFlow ready! Use Ctrl+O to open, Ctrl+S to save.', 'success', 3000);
+      }, 1000);
+    }
+
+    // Start the application
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
