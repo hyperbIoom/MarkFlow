@@ -1,0 +1,4 @@
+Flask
+pywebview
+filelock
+PyYAML
