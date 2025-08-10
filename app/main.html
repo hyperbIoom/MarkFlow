@@ -369,6 +369,7 @@
                 this.nextTabId = 1;
                 this.draggedTab = null;
                 this.dropIndex = -1;
+                this.titleObservers = new Map(); // Store title observers for each tab
                 
                 this.init();
                 this.loadConfig();
@@ -428,7 +429,9 @@
                     title: title,
                     closable: closable,
                     element: null,
-                    contentElement: null
+                    contentElement: null,
+                    iframe: null,
+                    titleElement: null
                 };
 
                 // Create tab element
@@ -477,26 +480,16 @@
                 iframe.className = 'tab-iframe';
                 iframe.src = url;
                 
-                // Update tab title when iframe loads
-                iframe.onload = () => {
-                    try {
-                        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                        const iframeTitle = iframeDoc.title;
-                        if (iframeTitle) {
-                            tab.title = iframeTitle;
-                            titleElement.textContent = iframeTitle;
-                            titleElement.title = iframeTitle;
-                        }
-                    } catch (e) {
-                        // Cross-origin or other error, keep original title
-                        titleElement.title = title;
-                    }
-                };
-
-                contentElement.appendChild(iframe);
-
+                // Store references
                 tab.element = tabElement;
                 tab.contentElement = contentElement;
+                tab.iframe = iframe;
+                tab.titleElement = titleElement;
+
+                // Setup title monitoring
+                this.setupTitleMonitoring(tab);
+
+                contentElement.appendChild(iframe);
 
                 // Insert tab before the new tab button
                 this.tabs.push(tab);
@@ -516,12 +509,126 @@
                 return tab;
             }
 
+            setupTitleMonitoring(tab) {
+                const iframe = tab.iframe;
+                let lastTitle = tab.title;
+                let titleCheckInterval = null;
+
+                // Function to update title
+                const updateTitle = (newTitle) => {
+                    if (newTitle && newTitle !== lastTitle && newTitle.trim() !== '') {
+                        lastTitle = newTitle;
+                        tab.title = newTitle;
+                        tab.titleElement.textContent = newTitle;
+                        tab.titleElement.title = newTitle;
+                        console.log(`Tab ${tab.id} title updated to: ${newTitle}`);
+                    }
+                };
+
+                // Initial load handler
+                const onLoad = () => {
+                    try {
+                        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                        if (iframeDoc) {
+                            const iframeTitle = iframeDoc.title;
+                            updateTitle(iframeTitle);
+
+                            // Monitor title changes using MutationObserver
+                            if (iframeDoc.querySelector('title')) {
+                                const observer = new MutationObserver((mutations) => {
+                                    mutations.forEach((mutation) => {
+                                        if (mutation.type === 'childList' || mutation.type === 'characterData') {
+                                            const currentTitle = iframeDoc.title;
+                                            updateTitle(currentTitle);
+                                        }
+                                    });
+                                });
+
+                                // Observe title element changes
+                                const titleEl = iframeDoc.querySelector('title');
+                                if (titleEl) {
+                                    observer.observe(titleEl, {
+                                        childList: true,
+                                        characterData: true,
+                                        subtree: true
+                                    });
+                                }
+
+                                // Also observe document head for new title elements
+                                observer.observe(iframeDoc.head || iframeDoc.documentElement, {
+                                    childList: true,
+                                    subtree: true
+                                });
+
+                                // Store observer for cleanup
+                                this.titleObservers.set(tab.id, observer);
+                            }
+
+                            // Fallback: Poll for title changes every 500ms
+                            if (titleCheckInterval) {
+                                clearInterval(titleCheckInterval);
+                            }
+                            
+                            titleCheckInterval = setInterval(() => {
+                                try {
+                                    const currentTitle = iframeDoc.title;
+                                    updateTitle(currentTitle);
+                                } catch (e) {
+                                    // Cross-origin or document changed, continue polling
+                                }
+                            }, 500);
+                        }
+                    } catch (e) {
+                        // Cross-origin restriction or other error
+                        console.log(`Cannot access iframe document for tab ${tab.id}, using polling fallback`);
+                        
+                        // Fallback: Poll for title changes via iframe.contentDocument.title
+                        if (titleCheckInterval) {
+                            clearInterval(titleCheckInterval);
+                        }
+                        
+                        titleCheckInterval = setInterval(() => {
+                            try {
+                                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                                if (iframeDoc && iframeDoc.title) {
+                                    updateTitle(iframeDoc.title);
+                                }
+                            } catch (e) {
+                                // Still can't access, keep trying
+                            }
+                        }, 1000);
+                    }
+                };
+
+                // Listen for iframe load events
+                iframe.addEventListener('load', onLoad);
+
+                // Also listen for navigation within iframe
+                iframe.addEventListener('load', () => {
+                    // Reset interval when navigating to new page
+                    setTimeout(onLoad, 100);
+                });
+
+                // Store interval reference for cleanup
+                tab.titleCheckInterval = titleCheckInterval;
+            }
+
             closeTab(tabId) {
                 const tabIndex = this.tabs.findIndex(t => t.id === tabId);
                 if (tabIndex === -1) return;
 
                 const tab = this.tabs[tabIndex];
                 if (!tab.closable) return;
+
+                // Clean up title monitoring
+                if (this.titleObservers.has(tabId)) {
+                    this.titleObservers.get(tabId).disconnect();
+                    this.titleObservers.delete(tabId);
+                }
+
+                if (tab.titleCheckInterval) {
+                    clearInterval(tab.titleCheckInterval);
+                }
 
                 // Remove elements
                 tab.element.remove();
