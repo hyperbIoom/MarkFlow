@@ -380,16 +380,77 @@
                 // Create home tab (non-closable)
                 this.createTab('home.html', 'Home', false);
                 
-                // Create editor tab (closable)
+                // Create editor tab (closable) 
                 this.createTab('editor.html', 'Editor');
                 
                 // Bind events
                 document.getElementById('newTabBtn').addEventListener('click', () => {
-                    this.createTab('editor.html', 'New Tab');
+                    this.openOrFocusTab('editor.html', 'New Tab');
                 });
 
                 // Setup drag and drop
                 this.setupDragAndDrop();
+            }
+
+            /**
+             * Normalize URL for comparison (remove fragments, query params if needed)
+             */
+            normalizeUrl(url) {
+                try {
+                    // Handle relative URLs
+                    const baseUrl = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/');
+                    const fullUrl = new URL(url, baseUrl);
+                    
+                    // Remove fragment (hash) for comparison
+                    fullUrl.hash = '';
+                    
+                    // Optionally remove query parameters for stricter matching
+                    // fullUrl.search = '';
+                    
+                    return fullUrl.href;
+                } catch (e) {
+                    // If URL parsing fails, return original URL
+                    return url;
+                }
+            }
+
+            /**
+             * Find existing tab with the same URL
+             */
+            findTabByUrl(url) {
+                const normalizedUrl = this.normalizeUrl(url);
+                return this.tabs.find(tab => this.normalizeUrl(tab.url) === normalizedUrl);
+            }
+
+            /**
+             * Open new tab or focus existing tab if URL already exists
+             */
+            openOrFocusTab(url, title = 'New Tab', closable = true) {
+                // Check if tab with this URL already exists
+                const existingTab = this.findTabByUrl(url);
+                
+                if (existingTab) {
+                    // Tab already exists, focus it instead of creating new one
+                    console.log(`Tab with URL ${url} already exists, focusing tab ${existingTab.id}`);
+                    this.activateTab(existingTab.id);
+                    
+                    // Optionally update title if the new title is different and not generic
+                    if (title && title !== 'New Tab' && title !== existingTab.title) {
+                        existingTab.title = title;
+                        existingTab.titleElement.textContent = title;
+                        existingTab.titleElement.title = title;
+                        console.log(`Updated existing tab ${existingTab.id} title to: ${title}`);
+                    }
+                    
+                    // Scroll to make sure the tab is visible
+                    this.scrollTabIntoView(existingTab.element);
+                    
+                    return existingTab;
+                } else {
+                    // No existing tab found, create new one
+                    console.log(`Creating new tab for URL: ${url}`);
+                    return this.createTab(url, title, closable);
+                }
             }
 
             async loadConfig() {
@@ -408,7 +469,7 @@
                 eventSource.onmessage = (event) => {
                     const data = JSON.parse(event.data);
                     if (data.type === 'open_tab') {
-                        this.createTab(data.url, data.title || 'New Tab');
+                        this.openOrFocusTab(data.url, data.title || 'New Tab');
                     }
                 };
 
@@ -506,6 +567,7 @@
                 // Activate the new tab
                 this.activateTab(tabId);
 
+                console.log(`Created new tab ${tabId} with URL: ${url}`);
                 return tab;
             }
 
