@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MarkFlow</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
     <style>
         :root {
             /* GNOME Light Theme */
@@ -28,8 +29,31 @@
             --shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
         }
 
+        :root[data-theme="dark"] {
+            /* GNOME Dark Theme */
+            --window-bg: #242424;
+            --headerbar-bg: #232428;
+            --headerbar-fg: #f7f9fc;
+            --headerbar-border: #3d3d3d;
+            --button-bg: transparent;
+            --button-fg: #ffffff;
+            --button-hover: rgba(255, 255, 255, 0.08);
+            --button-active: rgba(255, 255, 255, 0.12);
+            --sidebar-bg: #2d2d2d;
+            --content-bg: #1e1e1e;
+            --border-color: #3d3d3d;
+            --text-primary: #ffffff;
+            --text-secondary: #c0bfbc;
+            --accent-blue: #032349;
+            --accent-blue-hover: #15539d;
+            --destructive-red: #e01b24;
+            --destructive-red-hover: #c01c28;
+            --success-green: #26a269;
+            --shadow: 0 1px 3px rgba(0, 0, 0, 0.24), 0 1px 2px rgba(0, 0, 0, 0.48);
+        }
+
         @media (prefers-color-scheme: dark) {
-            :root {
+            :root:not([data-theme]) {
                 /* GNOME Dark Theme */
                 --window-bg: #242424;
                 --headerbar-bg: #232428;
@@ -370,6 +394,8 @@
                 this.draggedTab = null;
                 this.dropIndex = -1;
                 this.titleObservers = new Map(); // Store title observers for each tab
+                this.lastValidConfig = null; // Store last valid config
+                this.configPollInterval = null; // Store config polling interval
                 
                 this.init();
                 this.loadConfig();
@@ -419,7 +445,19 @@
              */
             findTabByUrl(url) {
                 const normalizedUrl = this.normalizeUrl(url);
-                return this.tabs.find(tab => this.normalizeUrl(tab.url) === normalizedUrl);
+                
+                // Allow multiple tabs for URLs without query parameters
+                // (to allow multiple "Untitled Document" tabs)
+                try {
+                    const urlObj = new URL(url, window.location.origin);
+                    if (!urlObj.search) {
+                        return null; // Allow multiple tabs for URLs without query string
+                    }
+                } catch (e) {
+                    // If URL parsing fails, fall back to original behavior
+                }
+                
+                return this.tabs.find(tab => this.normalizeUrl(tab.currentUrl) === normalizedUrl);
             }
 
             /**
@@ -455,11 +493,50 @@
 
             async loadConfig() {
                 try {
-                    const response = await fetch('/config.json');
-                    const config = await response.json();
-                    // GNOME theme is handled by CSS media queries
+                    const response = await fetch('/config.yaml?t=' + Date.now());
+                    if (response.ok) {
+                        const yamlText = await response.text();
+                        const config = jsyaml.load(yamlText);
+                        
+                        if (config && typeof config === 'object') {
+                            this.lastValidConfig = config;
+                            this.applyConfig(config);
+                            console.log('Config loaded successfully:', config);
+                        }
+                    } else {
+                        console.log('Config file not found, using last valid config or system theme');
+                    }
                 } catch (error) {
-                    console.log('Config not found, using system theme');
+                    console.log('Error loading config, using last valid config or system theme:', error.message);
+                }
+                
+                // Start polling for config changes every 4 seconds
+                if (!this.configPollInterval) {
+                    this.configPollInterval = setInterval(() => {
+                        this.loadConfig();
+                    }, 4000);
+                }
+            }
+
+            applyConfig(config) {
+                const root = document.documentElement;
+                
+                // Apply theme
+                if (config.theme) {
+                    switch (config.theme.toLowerCase()) {
+                        case 'light':
+                            root.setAttribute('data-theme', 'light');
+                            break;
+                        case 'dark':
+                            root.setAttribute('data-theme', 'dark');
+                            break;
+                        case 'system':
+                        case 'auto':
+                        default:
+                            root.removeAttribute('data-theme');
+                            break;
+                    }
+                    console.log('Theme applied:', config.theme);
                 }
             }
 
@@ -487,6 +564,7 @@
                 const tab = {
                     id: tabId,
                     url: url,
+                    currentUrl: url, // Track current URL (can change during navigation)
                     title: title,
                     closable: closable,
                     element: null,
@@ -576,7 +654,7 @@
                 let lastTitle = tab.title;
                 let titleCheckInterval = null;
 
-                // Function to update title
+                // Function to update title and URL
                 const updateTitle = (newTitle) => {
                     if (newTitle && newTitle !== lastTitle && newTitle.trim() !== '') {
                         lastTitle = newTitle;
@@ -584,6 +662,32 @@
                         tab.titleElement.textContent = newTitle;
                         tab.titleElement.title = newTitle;
                         console.log(`Tab ${tab.id} title updated to: ${newTitle}`);
+                    }
+                };
+
+                // Function to update current URL
+                const updateCurrentUrl = () => {
+                    try {
+                        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                        if (iframeDoc && iframeDoc.location) {
+                            const newUrl = iframeDoc.location.href;
+                            if (newUrl !== tab.currentUrl) {
+                                console.log(`Tab ${tab.id} URL changed from ${tab.currentUrl} to ${newUrl}`);
+                                tab.currentUrl = newUrl;
+                            }
+                        }
+                    } catch (e) {
+                        // Cross-origin restriction, can't access URL
+                        try {
+                            // Fallback: try to get URL from iframe.src if it changed
+                            const srcUrl = iframe.src;
+                            if (srcUrl !== tab.currentUrl) {
+                                console.log(`Tab ${tab.id} URL updated via src: ${srcUrl}`);
+                                tab.currentUrl = srcUrl;
+                            }
+                        } catch (e2) {
+                            // Can't determine URL change
+                        }
                     }
                 };
 
@@ -635,8 +739,10 @@
                                 try {
                                     const currentTitle = iframeDoc.title;
                                     updateTitle(currentTitle);
+                                    updateCurrentUrl();
                                 } catch (e) {
                                     // Cross-origin or document changed, continue polling
+                                    updateCurrentUrl(); // Still try to update URL
                                 }
                             }, 500);
                         }
@@ -655,8 +761,10 @@
                                 if (iframeDoc && iframeDoc.title) {
                                     updateTitle(iframeDoc.title);
                                 }
+                                updateCurrentUrl();
                             } catch (e) {
                                 // Still can't access, keep trying
+                                updateCurrentUrl(); // Still try to update URL
                             }
                         }, 1000);
                     }
@@ -668,8 +776,18 @@
                 // Also listen for navigation within iframe
                 iframe.addEventListener('load', () => {
                     // Reset interval when navigating to new page
+                    updateCurrentUrl(); // Update URL immediately on load
                     setTimeout(onLoad, 100);
                 });
+
+                // Listen for beforeunload to catch navigation start
+                try {
+                    iframe.contentWindow.addEventListener('beforeunload', () => {
+                        setTimeout(() => updateCurrentUrl(), 100);
+                    });
+                } catch (e) {
+                    // Cross-origin restriction
+                }
 
                 // Store interval reference for cleanup
                 tab.titleCheckInterval = titleCheckInterval;
