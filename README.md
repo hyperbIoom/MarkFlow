@@ -105,7 +105,7 @@ If you’d like to add a feature or fix a bug:
 
 ## 📄 License
 
-This project is licensed under the [GNU GPL-3.0](LICENSE).
+This project is licensed under the [GNU GPL-3.0](https://github.com/hyperbIoom/MarkFlow/blob/main/LICENSE).
 Feel free to use, modify, and share.
 
 ---
