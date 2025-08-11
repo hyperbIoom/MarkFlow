@@ -57,7 +57,7 @@ This will start the backend server and open MarkFlow in a desktop window.
 MarkFlow reads settings from `config.yaml` (optional).
 You can customize:
 
-* Theme (`light`, `dark`, or `system`)
+* Theme (`light`, `dark`)
 * Auto-save interval
 * Editor toolbar layout
   Example:
