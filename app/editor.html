@@ -388,10 +388,12 @@
     let editor;
     let currentFileName = 'Untitled Document';
     let isModified = false;
+    let hasBeenSavedBefore = false; // Thêm biến để track việc đã lưu file lần đầu
     let config = {};
     let previousConfig = {}; // Store previous valid config
     let autoSaveInterval;
     let configReloadInterval;
+    let isOpeningFromQuery = false; // Thêm biến để tránh kích hoạt cơ chế open file khi update URL
 
     // API Configuration
     const API_BASE = window.location.origin;
@@ -451,6 +453,15 @@
       document.title = title;
     }
 
+    // Update URL với path parameter mà không trigger reload
+    function updateUrlWithPath(path) {
+      if (path) {
+        const url = new URL(window.location);
+        url.searchParams.set('path', encodeURIComponent(path));
+        window.history.replaceState(null, '', url.toString());
+      }
+    }
+
     // Get path from URL query parameter
     function getPathFromQuery() {
       const urlParams = new URLSearchParams(window.location.search);
@@ -469,6 +480,7 @@
             updateWindowTitle(result.filename);
           }
           isModified = false;
+          hasBeenSavedBefore = true; // File đã được mở thành công, tức là đã có path
           updateWindowTitle();
           updateSaveStatus('Saved');
           updateWordCount();
@@ -616,7 +628,8 @@
     function setupAutoSave() {
       if (config.autoSave && config.autoSaveInterval > 0) {
         autoSaveInterval = setInterval(async () => {
-          if (isModified) {
+          // Chỉ auto save nếu: có thay đổi và file đã được lưu lần đầu
+          if (isModified && hasBeenSavedBefore) {
             try {
               const content = editor.getMarkdown();
               const result = await apiCall('/api/save', { content });
@@ -646,10 +659,16 @@
             updateWindowTitle(result.filename);
           }
           isModified = false;
+          hasBeenSavedBefore = true; // File đã được mở thành công
           updateWindowTitle();
           updateSaveStatus('Saved');
           updateWordCount();
           showStatusNotification(`Opened: ${result.filename || 'file'}`, 'success');
+          
+          // Update URL với path nếu có
+          if (result.path) {
+            updateUrlWithPath(result.path);
+          }
         } else {
           showStatusNotification(result.message || 'Failed to open file', 'error');
         }
@@ -668,6 +687,14 @@
             updateWindowTitle(result.filename);
           }
           isModified = false;
+          
+          // Nếu đây là lần đầu tiên save file (chưa từng save trước đó)
+          // thì update URL với path và đánh dấu đã save
+          if (!hasBeenSavedBefore && result.path) {
+            updateUrlWithPath(result.path);
+          }
+          
+          hasBeenSavedBefore = true; // File đã được lưu thành công
           updateWindowTitle();
           updateSaveStatus('Saved');
           showStatusNotification(`Saved: ${result.filename || 'file'}`, 'success');
@@ -689,9 +716,15 @@
             updateWindowTitle(result.filename);
           }
           isModified = false;
+          hasBeenSavedBefore = true; // File đã được lưu thành công
           updateWindowTitle();
           updateSaveStatus('Saved');
           showStatusNotification(`Saved as: ${result.filename || 'file'}`, 'success');
+          
+          // Update URL với path mới cho Save As
+          if (result.path) {
+            updateUrlWithPath(result.path);
+          }
         } else {
           showStatusNotification(result.message || 'Failed to save file', 'error');
         }
@@ -816,7 +849,9 @@
       // Check for path parameter and open file if exists
       const pathFromQuery = getPathFromQuery();
       if (pathFromQuery) {
+        isOpeningFromQuery = true; // Đánh dấu đang mở từ query
         await openFileByPath(pathFromQuery);
+        isOpeningFromQuery = false; // Reset flag
       }
 
       // Setup auto-save
