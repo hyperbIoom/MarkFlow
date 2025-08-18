@@ -8,6 +8,10 @@
   <link id="editor-theme-dark" rel="stylesheet" href="https://uicdn.toast.com/editor/latest/theme/toastui-editor-dark.min.css" disabled>
   <!-- js-yaml for config parsing -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+  <!-- KaTeX for LaTeX rendering -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
     
@@ -314,6 +318,36 @@
     body.dark-theme .toastui-editor-toolbar {
       background-color: var(--headerbar-bg) !important;
       border-bottom-color: var(--headerbar-border) !important;
+    }
+
+    /* KaTeX error styling */
+    .katex-error {
+      background-color: #fee2e2;
+      color: #dc2626;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border-left: 4px solid #dc2626;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+    }
+
+    body.dark-theme .katex-error {
+      background-color: #450a0a;
+      color: #fca5a5;
+      border-left-color: #dc2626;
+    }
+
+    /* KaTeX container styling */
+    .katex-container {
+      text-align: center;
+      margin: 16px 0;
+      padding: 12px;
+      background-color: rgba(0, 0, 0, 0.02);
+      border-radius: 6px;
+    }
+
+    body.dark-theme .katex-container {
+      background-color: rgba(255, 255, 255, 0.02);
     }
   </style>
 </head>
@@ -773,6 +807,48 @@
       }
     }
 
+    // KaTeX plugin for Toast UI Editor
+    function katexPlugin() {
+      const toHTMLRenderers = {
+        katex(node) {
+          try {
+            // Extract math content from LaTeX document structure
+            const content = node.literal;
+            let mathContent = content;
+            
+            // Simple extraction of math expressions
+            const mathMatch = content.match(/\$([^$]+)\$/);
+            if (mathMatch) {
+              mathContent = mathMatch[1];
+            }
+            
+            // Render using KaTeX
+            const rendered = katex.renderToString(mathContent, {
+              displayMode: true,
+              throwOnError: false,
+              errorColor: '#cc0000',
+              strict: 'warn'
+            });
+
+            return [
+              { type: 'openTag', tagName: 'div', attributes: { class: 'katex-container' }, outerNewLine: true },
+              { type: 'html', content: rendered },
+              { type: 'closeTag', tagName: 'div', outerNewLine: true }
+            ];
+          } catch (error) {
+            console.error('LaTeX rendering error:', error);
+            return [
+              { type: 'openTag', tagName: 'div', attributes: { class: 'katex-error' }, outerNewLine: true },
+              { type: 'text', content: `KaTeX Error: ${error.message}` },
+              { type: 'closeTag', tagName: 'div', outerNewLine: true }
+            ];
+          }
+        },
+      }
+
+      return { toHTMLRenderers }
+    }
+
     function createEditor(theme) {
       const editorEl = document.querySelector('#editor');
       editorEl.innerHTML = '';
@@ -780,6 +856,7 @@
       const editorConfig = {
         el: editorEl,
         theme: theme,
+        plugins: [katexPlugin],
         ...config.editor
       };
       

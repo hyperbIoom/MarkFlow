@@ -1,7 +1,7 @@
 # Text Editor Configuration
-theme: system
+theme: dark
 autoSave: true
-autoSaveInterval: 30000
+autoSaveInterval: 10000
 
 # Theme options:
 # - light: Always use light theme
@@ -19,7 +19,7 @@ editor:
   initialEditType: 'wysiwyg'
   initialValue: '# Start writing your note here...'
   usageStatistics: false
-  hideModeSwitch: true
+  hideModeSwitch: false
   toolbarItems:
     - ['heading', 'bold', 'italic', 'strike']
     - ['hr', 'quote']
