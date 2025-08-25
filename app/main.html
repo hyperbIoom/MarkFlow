@@ -557,6 +557,14 @@
                         this.listenToFlask();
                     }, 5000);
                 };
+
+                // Listen for postMessage from iframes (like home.html)
+               window.addEventListener('message', (event) => {
+                   // Basic security check - you may want to add origin validation
+                   if (typeof event.data === 'string' && event.data.includes('.html')) {
+                       this.openOrFocusTab(event.data, 'Editor');
+                   }
+               });
             }
 
             createTab(url, title = 'New Tab', closable = true) {
