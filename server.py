@@ -14,7 +14,8 @@ import yaml
 import random
 import socket
 from pathlib import Path
-from urllib.parse import quote, unquote
+from urllib.parse import quote, unquote, urlparse
+import subprocess
 from flask import Flask, request, jsonify, send_from_directory, Response, stream_template
 import webview
 from filelock import FileLock
@@ -42,6 +43,35 @@ class MarkFlowServer:
         self.monitor_thread.start()
         
         self.setup_routes()
+
+        def resolve_file_uri(self, path):
+                """Resolve file URI or recent:// URI to actual file path"""
+                if not path:
+                    return None
+                    
+                # Handle file:// URI
+                if path.startswith('file://'):
+                    return urlparse(path).path
+                
+                # Handle recent:// URI using gio (GNOME) or similar tools
+                if path.startswith('recent://'):
+                    try:
+                        # Try to get real path using gio info
+                        result = subprocess.run(
+                            ['gio', 'info', path, '--attributes=standard::target-uri'],
+                            capture_output=True, text=True, timeout=5
+                        )
+                        if result.returncode == 0:
+                            for line in result.stdout.split('\n'):
+                                if 'standard::target-uri:' in line:
+                                    target_uri = line.split(':', 2)[2].strip()
+                                    if target_uri.startswith('file://'):
+                                        return urlparse(target_uri).path
+                    except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError):
+                        pass
+                
+                # Return as-is if already a regular path
+                return path
     
     def monitor_opening_file(self):
         """Monitor opening.txt file for new file paths to open"""
@@ -60,9 +90,11 @@ class MarkFlowServer:
                                 
                                 # Process each file immediately
                                 for file_path in file_paths:
-                                    if os.path.exists(file_path) and file_path.endswith('.md'):
-                                        print(f"Opening file: {file_path}")
-                                        self.send_open_tab_event(file_path)
+                                    # Resolve URI to actual path
+                                    resolved_path = self.resolve_file_uri(file_path)
+                                    if resolved_path and os.path.exists(resolved_path) and resolved_path.endswith('.md'):
+                                        print(f"Opening file: {resolved_path}")
+                                        self.send_open_tab_event(resolved_path)
                                 
                                 # Clear the file content
                                 self.opening_file.write_text('', encoding='utf-8')
@@ -436,11 +468,21 @@ class MarkFlowServer:
                 # Decode URL-encoded path
                 file_path = unquote(file_path)
                 
-                if not os.path.exists(file_path):
+                # Resolve URI to actual file path
+                resolved_path = self.resolve_file_uri(file_path)
+                if not resolved_path:
                     return jsonify({
                         'success': False,
-                        'message': f'File not found: {file_path}'
+                        'message': f'Could not resolve path: {file_path}'
                     })
+                
+                if not os.path.exists(resolved_path):
+                    return jsonify({
+                        'success': False,
+                        'message': f'File not found: {resolved_path}'
+                    })
+                
+                file_path = resolved_path  # Use resolved path for subsequent operations
                 
                 with open(file_path, 'r', encoding='utf-8') as f:
                     content = f.read()
@@ -679,8 +721,10 @@ class MarkFlowServer:
             
             # Store initial file path
             initial_file = None
-            if file_path and os.path.exists(file_path):
-                initial_file = os.path.abspath(file_path)
+            if file_path:
+                resolved_path = self.resolve_file_uri(file_path)
+                if resolved_path and os.path.exists(resolved_path):
+                    initial_file = os.path.abspath(resolved_path)
                 # Load the file content
                 try:
                     with open(initial_file, 'r', encoding='utf-8') as f:
